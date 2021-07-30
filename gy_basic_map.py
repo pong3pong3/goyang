@@ -11,22 +11,19 @@ gy_stat['avg_acq_area'] = gy_stat['avg_acq_area'].apply(lambda x: np.log10(x))
 gy_gpkg = gpd.read_file('gy_jurisdiction.gpkg')
 gy_gpkg = gy_gpkg.merge(gy_stat, 'left', left_on = 'EMD_NM', right_on  = 'village')
 
-gy_gpkg.loc[pd.isna(gy_gpkg['village']),'district'] = ['일산서구']+\
-        ['덕양구']*4
-gy_gpkg = gy_gpkg.drop(columns = ['village','avg_acq_area'])
-gy_district = gy_gpkg.dissolve('district').drop(columns=['EMD_CD','EMD_NM'])
-
 gy_tidy = pd.read_csv('gy_tidy.csv')
-gy_time = gy_tidy.groupby(['구','연도']).count()
-gy_time['district'] = list(zip(*gy_time.index))[0]
-gy_time = gy_time[['면적','district']]
-gy_district = gy_district.merge(gy_time.iloc[::2], 'left', on='district')
-gy_district.columns = list(gy_district.columns[:-1])+['2019']
-gy_district = gy_district.merge(gy_time.iloc[1::2], 'left', on='district')
-gy_district.columns = list(gy_district.columns[:-1])+['2020']
-gy_district['centroid']=gy_district['geometry'].centroid
+gy_time = gy_tidy.groupby(['동','연도']).count()
+gy_time['village'] = list(zip(*gy_time.index))[0]
+gy_time = gy_time[['면적','village']]
+gy_gpkg = gy_gpkg.merge(gy_time.iloc[::2], 'left', on='village')
+gy_gpkg.columns = list(gy_gpkg.columns[:-1])+['2019']
+gy_gpkg = gy_gpkg.merge(gy_time.iloc[1::2], 'left', on='village')
+gy_gpkg.columns = list(gy_gpkg.columns[:-1])+['2020']
+gy_gpkg.loc[pd.isna(gy_gpkg.loc[:,'2019']),'2019']=0
+gy_gpkg.loc[pd.isna(gy_gpkg.loc[:,'2020']),'2020']=0
 
 gy_json = gy_gpkg.to_json()
+gy_gpkg['centroid']=gy_gpkg['geometry'].centroid
 #gy_json = eval(gy_json)
 gy_centre = gy_gpkg.to_crs('epsg:5186').dissolve()\
         .geometry.buffer(.1).centroid.to_crs('epsg:4326')
@@ -53,18 +50,24 @@ folium.GeoJson(gy_json,
             aliases=('Name',)),
             ).add_to(gy_map)
 
-for i in gy_district.index:
-    lat = gy_district.loc[i, 'centroid'].y
-    lon = gy_district.loc[i, 'centroid'].x
-    count = gy_district.loc[i, '2020'] - gy_district.loc[i, '2019']
+for i in gy_gpkg.index:
+    lat = gy_gpkg.loc[i, 'centroid'].y
+    lon = gy_gpkg.loc[i, 'centroid'].x
+    before = gy_gpkg.loc[i, '2020'] 
+    after = gy_gpkg.loc[i, '2019']
+    count = after - before 
     if count > 0:
         color = 'red'
-    else: 
+    elif count < 0: 
         color = 'blue'
+    else:
+        continue
     folium.CircleMarker([lat,lon],
             fill_color = color,
             radius = abs(float(count)),
-            weight = 0).add_to(gy_map)
+            weight = 0,
+            popup = str(int(before))+' in 2019, '+str(int(after))+' in 2020',
+            ).add_to(gy_map)
 
 folium.LayerControl(position = 'bottomleft').add_to(gy_map)
 gy_map.save('index.html')
