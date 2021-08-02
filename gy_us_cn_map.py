@@ -31,9 +31,9 @@ folium.Choropleth(geo_data = gy_json,
         data = gy,
         columns = ['EMD_NM','19uscn'],
         key_on = 'properties.EMD_NM',
-        fill_color = 'YlOrRd',
+        fill_color = 'RdBu_r',
         nan_fill_opacity = 0,
-        name = '2019 중국취득자 비중',
+        name = '2019 미국인vs중국인 취득건수',
         legend_name = 'China / (US+China) (%)',
         ).add_to(gy_map)
 
@@ -41,9 +41,9 @@ duplicate = folium.Choropleth(geo_data = gy_json,
                   data = gy,
                   columns = ['EMD_NM','20uscn'],
                   key_on = 'properties.EMD_NM',
-                  fill_color = 'YlOrRd',
+                  fill_color = 'RdBu_r',
                   nan_fill_opacity = 0,
-                  name = '2020 중국취득자 비중',
+                  name = '2020 미국인vs중국인 취득건수',
                   show = False
                   )
 def remove_legend(choropleth):
@@ -56,7 +56,7 @@ def remove_legend(choropleth):
     return choropleth
 remove_legend(duplicate).add_to(gy_map)
 
-layer = folium.FeatureGroup(name = '취득건수')
+layer = folium.FeatureGroup(name = '취득건수(2019~2020)')
 for i in range(len(gy)):
     total = gy.loc[i,'total']
     if total == 0:
@@ -82,5 +82,5 @@ folium.GeoJson(gy_json,
         ).add_to(gy_map)
 
 layer.add_to(gy_map)
-folium.LayerControl(position = 'bottomleft').add_to(gy_map)
+folium.LayerControl(position = 'bottomleft', collapsed = False).add_to(gy_map)
 gy_map.save('index.html')
